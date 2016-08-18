@@ -1,0 +1,25 @@
+{
+  "manifest_version": 2,
+
+  "name": "Linkedin search",
+  "description": "This extension shows a Linkedin profiles search result for the given criteries",
+  "version": "1.0",
+
+  "browser_action": {
+    "default_icon": "images/icon.png",
+    "default_title": "Click here!"
+  },
+  "permissions": [
+    "activeTab", "https://homestead.app/"
+  ],
+  "background": {
+    "scripts": ["js/background.js"]
+  },
+
+  "content_scripts": [{
+    "matches": ["https://www.linkedin.com/vsearch/*"],
+    "css": [ "css/custom.css"],
+    "js": ["js/jquery-3.1.0.min.js", "js/main.js"]
+  }],
+  "web_accessible_resources": ["question-icon.png"]
+}
