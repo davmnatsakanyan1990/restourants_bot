@@ -194,11 +194,14 @@
     left: 0px;
 
 }
-span.state span{
+span.state .report{
     display: none;
 }
-
-span.state:hover span{
+.rep_el{
+    display: block;
+    margin-left: 30px;
+}
+span.state:hover .report{
     border: 1px solid black;
     border-radius: 5px;
     padding: 5px 20px 5px 5px;
@@ -206,7 +209,7 @@ span.state:hover span{
     z-index: 100000000;
     background-color: #212429;
     left: 45px;
-    width: 250px;
+    width: 400px;
     position: relative;
     top: -20px;
     text-decoration: none;
@@ -221,6 +224,11 @@ p.st{
 
 .ext_version{
     color: darkgray;
+}
+
+.src_result ul{
+    display: inline-block;
+    margin-right: 50px;
 }
 
 

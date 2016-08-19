@@ -2,12 +2,12 @@
   "manifest_version": 2,
 
   "name": "Linkedin search",
-  "description": "This extension shows a Linkedin profiles search result for the given criteries",
-  "version": "1.0",
+  "description": "This extension allow you to make auto visits to Linkedin profiles",
+  "version": "2.0",
 
   "browser_action": {
     "default_icon": "images/icon.png",
-    "default_title": "Click here!"
+    "default_title": "ProspectLink"
   },
   "permissions": [
     "activeTab", "https://homestead.app/"
@@ -17,7 +17,7 @@
   },
 
   "content_scripts": [{
-    "matches": ["https://www.linkedin.com/vsearch/*"],
+    "matches": ["https://www.linkedin.com/vsearch/p*"],
     "css": [ "css/custom.css"],
     "js": ["js/jquery-3.1.0.min.js", "js/main.js"]
   }],
