@@ -42,7 +42,7 @@ function getCurrentTabUrl(callback) {
 
 chrome.browserAction.onClicked.addListener(function(activeTab)
 {
-    var newURL = "https://www.linkedin.com/vsearch/f?adv=true&trk=federated_advs";
+    var newURL = "https://www.zomato.com/salt-lake-city/restaurants";
     getCurrentTabUrl(function(url) {
         if(url != newURL){
             chrome.tabs.create({ url: newURL });

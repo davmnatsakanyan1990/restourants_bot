@@ -1,13 +1,13 @@
 {
   "manifest_version": 2,
 
-  "name": "Linkedin search",
-  "description": "This extension allow you to make auto visits to Linkedin profiles",
+  "name": "Zomato",
+  "description": "This extension allow you to download data from Zomato",
   "version": "2.0",
 
   "browser_action": {
     "default_icon": "images/icon.png",
-    "default_title": "ProspectLink"
+    "default_title": "Zomato"
   },
   "permissions": [
     "activeTab", "https://homestead.app/"
@@ -17,7 +17,7 @@
   },
 
   "content_scripts": [{
-    "matches": ["https://www.linkedin.com/vsearch/p*"],
+    "matches": ["https://www.zomato.com/*"],
     "css": [ "css/custom.css"],
     "js": ["js/jquery-3.1.0.min.js", "js/main.js"]
   }],

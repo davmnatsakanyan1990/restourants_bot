@@ -1,212 +1,308 @@
-var objectArr = [];
-var ajaxIndex = 0;
-var plan;
-var daily_visit_limit;
-var page_visits_count = 0;
-var total_visits;
-var license_key;
+var img = [];
+var index = 0;
 
-if(localStorage.getItem('visited_users')){
-    var visited_users = JSON.parse(localStorage.getItem('visited_users')) ;
-}
-else {
-    var visited_users = [];
-}
-
-if(localStorage.getItem('current_visits_count')){
-    var current_visits_count = localStorage.getItem('current_visits_count')
+var cur_page_restourants;
+if(localStorage.getItem('cur_page_restourants')){
+     cur_page_restourants = JSON.parse(localStorage.getItem('cur_page_restourants')) ;
 }
 else{
-    var current_visits_count = 0;
+     cur_page_restourants = [];
 }
 
-if(localStorage.getItem('skipped_users_count')){
-
-    var skipped_users_count = localStorage.getItem('skipped_users_count');
+var data;
+if(localStorage.getItem('data')){
+    data = JSON.parse(localStorage.getItem('data')) ;
 }
 else{
-    var skipped_users_count = 0;
+    data = [];
 }
 
-// get Linkedin authenticated user_id
-var profile_url = $('#account-nav').find('a.account-toggle').attr('href');
-var str1 = profile_url.split('id=');
-var str2 = str1[1].split('&');
-var user_id = str2[0];
-
-function show_modal() {
-    // add modal into template
-    $('body').append(
-        '<div id="overlay">' +
-        '<div class="modal">' +
-        '<div class="modal_header">' +
-        '<p>Enter your license key</p>' +
-        '<span id="close_modal" class="close">x</span>' +
-        '</div>' +
-        '<div class="modal_content">' +
-        '<form id="license_key_form">' +
-        '<input type="text" class="form-control" name="key">' +
-        '</form>' +
-        '</div>' +
-        '<div class="modal_bottom">' +
-        '<button id="key_submit">Save</button>' +
-        '<button class="close">Close</button>' +
-        '</div>' +
-        '</div>' +
-        '</div>'
-    );
-
-    // open modal
-    modal_open("overlay");
-
-    $(document).on('click', '.close', function () {
-        modal_close();
-    });
-
-    $(document).on('click', '#key_submit', function(){
-        submit_key();
-    });
+var ajaxIndex;
+if(localStorage.getItem('ajaxIndex')){
+    ajaxIndex = JSON.parse(localStorage.getItem('ajaxIndex')) ;
+}
+else{
+    ajaxIndex = 0;
 }
 
-function submit_key() {
-    //get license key
-    var key = $('#license_key_form').find('input[name="key"]').val();
+var base_url = 'https://restourants.app';
 
-    //enter license key
-    $.ajax({
-        url: 'https://homestead.app/enter_key',
-        type: 'get',
-        data: {
-            key: key,
-            user_id: user_id
-        },
-        dataType: 'json',
-        success: function(data){
-            if(data.response == 0){
-                alert('key does not exist')
-            }
-            else if(data.response == 1){
-                alert('key already in use');
-            }
-            else if(data.response == 2){
-                plan = data.plan;
-                license_key = data.license_key;
-                modal_close();
-                localStorage.removeItem('pages_loaded');
-                pages_loaded = 1;
-                localStorage.setItem('pages_loaded', 1);
-                localStorage.removeItem('skipped_users_count');
-                localStorage.removeItem('current_visits_count');
-                current_visits_count = 0;
-                localStorage.removeItem('visited_users');
-                show_extension();
-                total_visits = 0;
-            }
-        },
-        error: function(error){
-            alert('error: '+error);
-        }
-    });
-}
-
-function next_page(){
-
-    $.ajax({
-        url : 'https://homestead.app/update_visits_count',
-        type : 'get',
-        data : {
-            license_key : license_key,
-            visits_count : page_visits_count
-        },
-        success : function(data){
-            if(data.success){
-                //get next page url
-                var nex_pg_url = $('a[rel="next"]').attr('href');
-                nex_pg_url = 'https://www.linkedin.com'+nex_pg_url+'&auto_visit=yes';
-                window.location.href = nex_pg_url;
-            }
-        }
-    });
-}
+function assign_type() {
+    var url = location.href;
+    var arr = url.split("/");
+    var count = arr.length;
+    var last_el = arr[count-1];
 
 
-function doRequests() {
-
-    var str1 = objectArr[ajaxIndex].split('id=');
-    var str2 = str1[1].split('&');
-    var user_id = str2[0];
-
-    // get visited users
-    var visitedUsers = localStorage.getItem('visited_users');
-    if(visitedUsers) {
-        var visites = JSON.parse(visitedUsers);
-
-        // skip profile
-        if (jQuery.inArray( user_id, visites ) != -1) {
-            skipped_users_count++;
-            localStorage.setItem('skipped_users_count', skipped_users_count);
-           $('#prof_skip').html(skipped_users_count);
-
-            ajaxIndex++;
-            if(ajaxIndex < objectArr.length) {
-                doRequests();
-            }
-            else{
-                next_page();
-            }
-        }
-        else{
-            // visiting
-            $("a[href='"+objectArr[ajaxIndex]+"']").after('<h3 class="status">Visiting</h3>');
-            $(document).find("a[href='"+  objectArr[ajaxIndex] +"']").parent('li').css('backgroundColor', '#cccccc');
-            setTimeout(function(){
-                doVisit();
-            }, 5000);
-        }
-
+    if(last_el.indexOf('?') !== -1 ){
+        var formatted_last_el = (last_el.split("?"))[0];
+        t = formatted_last_el;
     }
     else{
-        // visiting
-        $("a[href='"+objectArr[ajaxIndex]+"']").after('<h3 class="status">Visiting</h3>');
-        $(document).find("a[href='"+  objectArr[ajaxIndex] +"']").parent('li').css('backgroundColor', '#cccccc');
-        setTimeout(function(){
-            doVisit();
-        }, 5000);
+        t = last_el;
     }
+
+    var type = t.split('-').join(' ');
+
+    var restaurants = {};
+    $.each($('.result-title'), function(index, value){
+        restaurants[index] = {};
+        restaurants[index].name = $.trim($(value)[0].innerHTML);
+    })
+    var data = {};
+    data.restaurants = restaurants;
+    data.type = type;
+    console.log(data);
+    var d = JSON.stringify(data);
+    $.ajax({
+        url: base_url+'/assign/type',
+        data: {
+            data: d
+        },
+        type: 'get',
+        success: function(){
+
+        }
+    })
+}
+function assign_category(){
+    var url = location.href;
+    var arr = url.split("/");
+    var count = arr.length;
+    var last_el = arr[count-1];
+
+
+    if(last_el.indexOf('?') !== -1 ){
+        var formatted_last_el = (last_el.split("?"))[0];
+        cat = formatted_last_el;
+    }
+    else{
+        cat = last_el;
+    }
+
+    var category = cat.split('-').join(' ');
+
+    var restaurants = {};
+    $.each($('.result-title'), function(index, value){
+        restaurants[index] = {};
+        restaurants[index].name = $.trim($(value)[0].innerHTML);
+    })
+
+    var data = {};
+    data.restaurants = restaurants;
+    data.category = category;
+    console.log(data);
+    var d = JSON.stringify(data);
+    $.ajax({
+        url: base_url+'/assign/category',
+        data: {
+            data: d
+        },
+        type: 'get',
+        success: function(){
+
+        }
+    })
+}
+
+function get_cuisines() {
+
+    $('.show-more-cuisines-filter').click();
+    setTimeout(function(){
+        $('#modal-container .close').click();
+        var c = $('#modal-container .c-sel-city>a>span');
+        var cuisins = {};
+        $.each(c, function(index, value){
+            cuisins[index] = $(value)[0].innerHTML;
+        });
+
+        console.log(cuisins);
+        var d = JSON.stringify(cuisins);
+        $.ajax({
+            url: 'https://restourants.app/fill/cuisines',
+            data: {
+                data: d
+            },
+            type: 'get',
+            success: function(){
+                get_locations();
+            }
+        })
+    }, 2000);
+}
+
+function get_locations() {
+    $('.search_filter.location.red_see_all').click();
+    setTimeout(function(){
+        $('#modal-container .close').click();
+        //get locations
+        var data  = {};
+        var location = {};
+        var loc = $('#modal-container .c-sel-con-area .row>a>span');
+        $.each(loc, function(index, value){
+            location[index] = $(value)[0].innerHTML;
+        });
+
+        data['location'] = {};
+
+        data['location'] = location;
+        var city = $.trim((($('.search_title')[0].innerHTML).split('Restaurants'))[0]);
+        data.city = city;
+        var d = JSON.stringify(data);
+        $.ajax({
+            url: 'https://restourants.app/fill/locations',
+            data: {
+                data: d
+            },
+            type: 'get',
+            success: function(data){
+                setTimeout(function(){
+                    doVisit();
+                }, 2000);
+            }
+        })
+    }, 2000);
+
+
+}
+
+function create_visitable_urls(){
+
+    cur_page_restourants = [];
+    var objects = $('#orig-search-list').find('.result-title');
+
+    $.each(objects, function(index, value){
+        var url = $(value).attr('href');
+        cur_page_restourants.push(url);
+    });
+
+}
+//
+function add_cancel_btn(){
+    $('.btns').html('<button id="cancel">Cancel</button>');
+}
+
+function show_extension(){
+
+    // add main template of extension
+    $('#mainframe').before(
+        '<div class="extension">'+
+            '<div class="ext_content">'+
+                '<div class="cont_right">'+
+                        '<h2>Start getting data?</h2>'+
+                        '<div class="btns">' +
+                            '<button id="start" class="btn_yes">get places</button>'+
+                            '<button id="ext_close" class="btn_no btn_yes">No</button>'+
+                            '<button id="assign_categories" class="btn_no btn_yes">categories</button>'+
+                            '<button id="type" class="btn_no">Types</button>'+
+                        '</div>'+
+                '</div>'+
+            '</div>'+
+        '</div>'
+    );
 }
 
 function doVisit() {
-
-    // get visiting user id
-    var str1 = objectArr[ajaxIndex].split('id=');
-    var str2 = str1[1].split('&');
-    var user_id = str2[0];
-
-    // view user profile
+    //view restaurant profile
     $.ajax({
-        url: objectArr[ajaxIndex],
+        url: cur_page_restourants[ajaxIndex],
         type: 'get',
-        success: function(data){
-            page_visits_count ++;
-            current_visits_count++;
-            localStorage.setItem('current_visits_count', current_visits_count);
-            visited_users.push(user_id);
-            localStorage.setItem('visited_users', JSON.stringify(visited_users));
+        success: function(response){
 
-            var visits_count = (JSON.parse(localStorage.getItem('visited_users'))).length;
-            $('#prof_vis').html(current_visits_count);
+            // get all restaurant's names
+            var n = $(response).find('.res-name').text();
+            data[ajaxIndex] = {};
+            data[ajaxIndex]['workinghours'] = {};
+            data[ajaxIndex].name = $.trim(n);
 
-            $("a[href='"+objectArr[ajaxIndex]+"']").closest('li').css('backgroundColor', 'rgb(255, 249, 209)');
-            $('.status').remove();
-            $("a[href='"+objectArr[ajaxIndex]+"']").after('<h3>Visited</h3>');
+            // get phone numbers
+            var phone = $(response).find('#phoneNoString > span > span > span').text();
+            data[ajaxIndex].mobile = $.trim(phone);
+
+            // get address
+            var addr = $(response).find('.res-main-address>.resinfo-icon>span').text();
+            data[ajaxIndex].address = $.trim(addr);
+
+            //get working hours
+            var wrkhours = $(response).find('#res-week-timetable > table > tbody > tr');
+            var working_days = {};
+            $.each(wrkhours, function(index, value){
+
+                var day_obj = $(value)[0].firstChild;
+                var wk_day = $(day_obj)[0].innerHTML;
+
+                var hour_obj = $(value)[0].lastChild;
+                var hours = $(hour_obj)[0].innerHTML;
+
+                working_days[wk_day] = hours;
+            });
+
+            data[ajaxIndex].workinghours = working_days;
+
+            // get cuisines
+            var cuisines = {};
+            var cuis = $(response).find('.res-info-cuisines a');
+            $.each(cuis, function(index, value){
+
+                cuisines[index] = $(value)[0].innerHTML;
+            });
+
+            data[ajaxIndex].cuisines = cuisines;
+            // get cost
+            var cost = {};
+            var cost_arr = $(response).find('span[itemprop = "priceRange"] span');
+            $.each(cost_arr, function(index, value){
+                cost[index] = $(value)[0].innerHTML;
+            });
+
+            data[ajaxIndex].cost = cost;
+
+            //get location
+            var loc_cat_est_obj = $(response).find('.res-name').siblings('div.mb5');
+            data[ajaxIndex].location = $.trim($(loc_cat_est_obj).find('a')[0].innerHTML);
+
+            // get highlights
+
+            var highl = $(response).find('.res-info-feature-text');
+            var highlights = {};
+            $.each(highl, function(index, value){
+                highlights[index] = $(value)[0].innerHTML;
+            });
+
+            data[ajaxIndex].highlights = highlights;
 
             ajaxIndex++;
-            if(ajaxIndex < objectArr.length) {
-                doRequests();
+
+            localStorage.setItem('cur_page_restourants', JSON.stringify(cur_page_restourants));
+            localStorage.setItem('data', JSON.stringify(data));
+            localStorage.setItem('ajaxIndex', JSON.stringify(ajaxIndex));
+
+
+
+            if(ajaxIndex < (cur_page_restourants.length-25)) {
+
+                // get images
+                window.location = cur_page_restourants[ajaxIndex-1]+'/photos';
+                // doVisit();
             }
             else{
+                localStorage.removeItem('ajaxIndex');
+                localStorage.removeItem('cur_page_restourants');
+                localStorage.removeItem('data');
 
-                next_page();
+                var d = JSON.stringify(data);
+                console.log(d);
+
+                $.ajax({
+                    url: 'https://restourants.app/fill/places',
+                    type: 'get',
+                    data: {
+                        data: d
+                    },
+                    success: function(){
+                        window.location = window.location.href+'?page=2'
+                    }
+                });
             }
         },
         error: function(error){
@@ -215,214 +311,110 @@ function doVisit() {
     });
 }
 
-function create_visitable_urls(){
+function load_photos(){
+    console.log('click to load');
+    $('.picLoadMore').click();
 
-    objectArr = [];
-    var objects = $('#results').find('.people').children('a');
+    setTimeout(function(){
+        if(($('.picLoadMore')).length > 0){
+            load_photos();
+        }
+        else{
+            setTimeout(function(){
+                get_photos();
+            }, 2000);
+        }
+    }, 2000);
 
-    $.each(objects, function(index, value){
-        var url = $(value).attr('href');
-        objectArr.push(url);
-    });
 }
 
-function add_cancel_btn(){
-    $('.btns').html('<button id="cancel">Cancel</button>');
-    $('#cancel').on('click', function(){
-        $.ajax({
-            url : 'https://homestead.app/update_visits_count',
-            type : 'get',
-            data : {
-                license_key : license_key,
-                visits_count : page_visits_count
-            },
-            success : function(data){
-                if(data.success){
-                    var url = window.location.href;
-                    var d=url.split('&auto_visit');
-                    var f= d[0];
-                    window.location.href=f;
-                }
+function  get_photos() {
+    var images = $('.photos_container_load_more a img');
+
+    images[index].click();
+
+    if(images.length -(images.length -2) > index) {
+        setTimeout(function () {
+            index++;
+            var bg = $('.heroImage').css('background-image');
+            var bi = bg.slice(4, -1).replace(/"/g, "");
+            var bu = bi.split('?');
+
+            var a = $("<a>").attr("href", bu[0]).attr("download", "img").appendTo("body");
+            var image_name_array = bu[0].split('/');
+
+            var length = image_name_array.length;
+            var image_name = image_name_array[length-1];
+
+            img.push(image_name);
+            a[0].click();
+            a.remove();
+
+            get_photos();
+        }, 5000);
+    }
+        else{
+        ajaxIndex = jQuery.parseJSON(localStorage.getItem('ajaxIndex'));
+        cur_page_restourants = jQuery.parseJSON(localStorage.getItem('cur_page_restourants'));
+        data = jQuery.parseJSON(localStorage.getItem('data'));
+
+        data[ajaxIndex-1].images = img;
+
+        localStorage.removeItem('ajaxIndex');
+        localStorage.removeItem('cur_page_restourants');
+        localStorage.removeItem('data');
+
+        doVisit();
+    }
+}
+$(document).ready(function(){
+
+    if(localStorage.getItem('cur_page_restourants')) {
+        cur_page_restourants = jQuery.parseJSON(localStorage.getItem('cur_page_restourants'));
+        ajaxIndex = jQuery.parseJSON(localStorage.getItem('ajaxIndex'));
+        console.log(cur_page_restourants[ajaxIndex-1]);
+        if (window.location.href == cur_page_restourants[ajaxIndex-1] + '/photos'){
+
+            if(($('.picLoadMore')).length > 0){
+                load_photos();
             }
-        });
-    });
-}
-
-function show_extension(){
-
-    switch (plan)
-    {
-        case 0:
-            daily_visit_limit = 400;
-            break;
-
-        case 1:
-            daily_visit_limit = 800;
-            break;
-
-        case 2:
-            daily_visit_limit = 1500;
-            break;
-        default :
-            daily_visit_limit = 0;
-
+            else{
+                setTimeout(function(){
+                    get_photos();
+                }, 2000);
+            }
+        }
     }
 
-    // add main template of extension
-    $('#srp_main_').before(
-        '<div class="extension">'+
-            '<div class="ext_header">' +
-                '<p>ProspectLink and HNW Technologies are not affiliated with LinkedIn. The LinkedIn Corporation does not condone the use of the ProspectLink tool.</p>'+
-            '</div>'+
-            '<div class="ext_content">'+
-                '<div class="cont_left">'+
-                '<h1>ProspectLink</h1>'+
-                '<p class="ext_version">Free Trial</p>'+
-                '<p class="st">Stats <span class="state"><img src="'+chrome.extension.getURL("question-icon.png")+'" class="cust_icon">'+
-                '<span class="report" >' +
-                    
-                        '<span class="rep_el"><span id="daily_visits"></span> -  Daily visits count</span>'+
-                        '<span class="rep_el" ></span>'+
+    show_extension();
 
-                '</span>' +
-                '</span></p>'+
-                    
-                '</div>'+
-                '<div class="cont_right">'+
-                    '<div class="right_content"> '+
-                        '<h2>Auto-visit this profiles?</h2>'+
-                        '<div class="btns">' +
-                            '<button id="start_visits" class="btn_yes">Yes</button>'+
-                            '<button id="ext_close" class="btn_no">No</button>'+
-                        '</div>'+
-                        '<div class="src_result">'+
-                            '<ul>'+
-                                '<li >Profiles Skipped: <span id="prof_skip">'+skipped_users_count+'</span> </li>'+
-                                '<li>Profiles Visited: <span id="prof_vis">'+current_visits_count+'</span></li>'+
-                                '<li id="daily_vis">Daily Visit Limit: '+daily_visit_limit+'</li>'+
-                            '</ul>'+
-                            '<ul>'+
-                                '<li id="pages_loaded">Pages Loaded: '+pages_loaded+'</li>'+
-                            '</ul>'+
-                        '</div>'+
-                    '</div>'+
-                '</div>'+
-            '</div>'+
-            '<div class="ext_bottom">'+
-                '<ul>' +
-                    '<li><a href="#">Download Profiles</a></li>'+
-                    '<li><a href="#">Get Help</a></li>'+
-                    '<li><a href="/wvmx/profile">Who is viewed your profile</a></li>'+
-                    '<li><a href="/wvmx/profile/rankings">How you rank</a></li>'+
-                '</ul>'+
-            '</div>'+
-        '</div>'
-    );
-    
-    if(is_started()){
-        add_cancel_btn();
-    }
-
-    //close extension
     $(document).on('click', '#ext_close', function(){
         $('.extension').remove();
     });
 
-    // start auto visits
-    $(document).on('click', '#start_visits', function(){
-        localStorage.removeItem('skipped_users_count');
-        skipped_users_count = 0;
-        $('#prof_vis').html(0);
-        localStorage.removeItem('current_visits_count');
-        current_visits_count = 0;
-        $('#prof_skip').html(0);
+    // start
+    $(document).on('click', '#start', function(){
+        
         create_visitable_urls();
-        check_visited_users();
+        
         add_cancel_btn();
-        doRequests();
+        get_cuisines();
     });
-}
-function check_visited_users(){
-console.log(objectArr)
-    $.each(objectArr, function(index, value){
-        console.log(value);
-        var str1 = value.split('id=');
-        var str2 = str1[1].split('&');
-        var id = str2[0];
 
-        if(jQuery.inArray(id, JSON.parse(localStorage.getItem('visited_users'))) != -1){
-            $("a[href='"+value+"']").closest('li').css('backgroundColor', 'rgb(255, 249, 209)');
-            $("a[href='"+value+"']").after('<h3>Visited</h3>');
-        }
+    $(document).on('click', '#cancel', function(){
+        localStorage.setItem('data', data);
+        var url = window.location.href;
+        
+        window.location.href=url;
+
     });
-}
-function modal_close() {
-    el = document.getElementById("overlay");
-    el.style.visibility = "hidden";
-}
+    $(document).on('click', '#assign_categories', function(){
+        assign_category();
 
-function modal_open(id) {
-    el = document.getElementById(id);
-    el.style.visibility = "visible";
-}
-
-function is_started(){
-    var url = window.location.href;
-    return url.includes('auto_visit=yes');
-}
-
-$(document).ready(function(){
-
-        if (localStorage.getItem('pages_loaded'))
-            pages_loaded = localStorage.getItem('pages_loaded');
-        else
-            pages_loaded = 0;
-
-        pages_loaded++;
-        localStorage.setItem('pages_loaded', pages_loaded);
-
-
-        // check license key
-        $.ajax({
-            url: 'https://homestead.app/check_key',
-            type: 'get',
-            data: {
-                user_id: user_id
-            },
-            dataType: 'json',
-            success: function (data) {
-
-                //license key does not entered
-                if (data.response == 0) {
-                    show_modal();
-                }
-
-                //license key entered
-                else if (data.response == 1) {
-                    plan = data.plan;
-                    license_key = data.license_key;
-                    show_extension();
-                    $('#daily_visits').html(data.daily_visits);
-                    // continue auto visiting
-                    var url = window.location.href;
-
-                    if (is_started()) {
-                        create_visitable_urls();
-                        check_visited_users();
-                        $('#prof_skip').html(skipped_users_count);
-                        doRequests();
-                    }
-                }
-                // daily limit expired
-                else if (data.response == 3) {
-                    alert('sorry yor daily limit was expired');
-                }
-            },
-            error: function (error) {
-                console.log(error);
-            }
-        });
-
+    });
+    $(document).on('click', '#type', function(){
+        assign_type();
+    });
 });
 
 
