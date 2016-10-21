@@ -1,5 +1,28 @@
 var img = [];
 var index = 0;
+var cat_page;
+if(localStorage.getItem('cat_page')){
+    cat_page = localStorage.getItem('cat_page');
+}
+else{
+    cat_page = 1;
+}
+
+var type_page;
+if(localStorage.getItem('type_page')){
+    type_page = localStorage.getItem('type_page');
+}
+else{
+    type_page = 1;
+}
+
+var page;
+if(localStorage.getItem('page')){
+    page = localStorage.getItem('page');
+}
+else{
+    page = 1;
+}
 
 var cur_page_restourants;
 if(localStorage.getItem('cur_page_restourants')){
@@ -14,7 +37,7 @@ if(localStorage.getItem('data')){
     data = JSON.parse(localStorage.getItem('data')) ;
 }
 else{
-    data = [];
+    data = null;
 }
 
 var ajaxIndex;
@@ -28,6 +51,8 @@ else{
 var base_url = 'https://restourants.app';
 
 function assign_type() {
+    type_page++;
+    localStorage.setItem('type_page', type_page);
     var url = location.href;
     var arr = url.split("/");
     var count = arr.length;
@@ -61,11 +86,20 @@ function assign_type() {
         },
         type: 'get',
         success: function(){
-
+            if($('.next').hasClass('disabled')){
+                localStorage.removeItem('type_url');
+                localStorage.removeItem('type_page');
+                alert('finished');
+            }
+            else{
+                window.location = localStorage.getItem('type_url')+'?page='+type_page+'&type_start';
+            }
         }
     })
 }
 function assign_category(){
+    cat_page++;
+    localStorage.setItem('cat_page', cat_page);
     var url = location.href;
     var arr = url.split("/");
     var count = arr.length;
@@ -86,7 +120,7 @@ function assign_category(){
     $.each($('.result-title'), function(index, value){
         restaurants[index] = {};
         restaurants[index].name = $.trim($(value)[0].innerHTML);
-    })
+    });
 
     var data = {};
     data.restaurants = restaurants;
@@ -100,7 +134,14 @@ function assign_category(){
         },
         type: 'get',
         success: function(){
-
+            if($('.next').hasClass('disabled')){
+                localStorage.removeItem('cat_url');
+                localStorage.removeItem('cat_page');
+                alert('finished');
+            }
+            else{
+                window.location = localStorage.getItem('cat_url')+'?page='+cat_page+'&cat_start';
+            }
         }
     })
 }
@@ -119,7 +160,7 @@ function get_cuisines() {
         console.log(cuisins);
         var d = JSON.stringify(cuisins);
         $.ajax({
-            url: 'https://restourants.app/fill/cuisines',
+            url: base_url+'/fill/cuisines',
             data: {
                 data: d
             },
@@ -150,7 +191,7 @@ function get_locations() {
         data.city = city;
         var d = JSON.stringify(data);
         $.ajax({
-            url: 'https://restourants.app/fill/locations',
+            url: base_url+'/fill/locations',
             data: {
                 data: d
             },
@@ -192,7 +233,7 @@ function show_extension(){
                         '<h2>Start getting data?</h2>'+
                         '<div class="btns">' +
                             '<button id="start" class="btn_yes">get places</button>'+
-                            '<button id="ext_close" class="btn_no btn_yes">No</button>'+
+                            '<button id="ext_close" class="btn_no btn_yes">Clear Storage</button>'+
                             '<button id="assign_categories" class="btn_no btn_yes">categories</button>'+
                             '<button id="type" class="btn_no">Types</button>'+
                         '</div>'+
@@ -208,101 +249,98 @@ function doVisit() {
         url: cur_page_restourants[ajaxIndex],
         type: 'get',
         success: function(response){
+            if(ajaxIndex < (cur_page_restourants.length)) {
+                // get all restaurant's names
+                var n = $(response).find('.res-name').text();
+                data = {};
 
-            // get all restaurant's names
-            var n = $(response).find('.res-name').text();
-            data[ajaxIndex] = {};
-            data[ajaxIndex]['workinghours'] = {};
-            data[ajaxIndex].name = $.trim(n);
+                data.name = $.trim(n);
 
-            // get phone numbers
-            var phone = $(response).find('#phoneNoString > span > span > span').text();
-            data[ajaxIndex].mobile = $.trim(phone);
+                // get phone numbers
+                var phone = $(response).find('#phoneNoString > span > span > span').text();
+                data.mobile = $.trim(phone);
 
-            // get address
-            var addr = $(response).find('.res-main-address>.resinfo-icon>span').text();
-            data[ajaxIndex].address = $.trim(addr);
+                // get address
+                var addr = $(response).find('.res-main-address>.resinfo-icon>span').text();
+                data.address = $.trim(addr);
 
-            //get working hours
-            var wrkhours = $(response).find('#res-week-timetable > table > tbody > tr');
-            var working_days = {};
-            $.each(wrkhours, function(index, value){
+                //get working hours
+                var wrkhours = $(response).find('#res-week-timetable > table > tbody > tr');
+                var working_days = {};
+                $.each(wrkhours, function(index, value){
 
-                var day_obj = $(value)[0].firstChild;
-                var wk_day = $(day_obj)[0].innerHTML;
+                    var day_obj = $(value)[0].firstChild;
+                    var wk_day = $(day_obj)[0].innerHTML;
 
-                var hour_obj = $(value)[0].lastChild;
-                var hours = $(hour_obj)[0].innerHTML;
+                    var hour_obj = $(value)[0].lastChild;
+                    var hours = $(hour_obj)[0].innerHTML;
 
-                working_days[wk_day] = hours;
-            });
+                    working_days[wk_day] = hours;
+                });
 
-            data[ajaxIndex].workinghours = working_days;
+                data.workinghours = working_days;
 
-            // get cuisines
-            var cuisines = {};
-            var cuis = $(response).find('.res-info-cuisines a');
-            $.each(cuis, function(index, value){
+                // get cuisines
+                var cuisines = {};
+                var cuis = $(response).find('.res-info-cuisines a');
+                $.each(cuis, function(index, value){
 
-                cuisines[index] = $(value)[0].innerHTML;
-            });
+                    cuisines[index] = $(value)[0].innerHTML;
+                });
 
-            data[ajaxIndex].cuisines = cuisines;
-            // get cost
-            var cost = {};
-            var cost_arr = $(response).find('span[itemprop = "priceRange"] span');
-            $.each(cost_arr, function(index, value){
-                cost[index] = $(value)[0].innerHTML;
-            });
+                data.cuisines = cuisines;
+                // get cost
+                var cost = {};
+                var cost_arr = $(response).find('span[itemprop = "priceRange"] span');
+                $.each(cost_arr, function(index, value){
+                    cost[index] = $(value)[0].innerHTML;
+                });
 
-            data[ajaxIndex].cost = cost;
+                data.cost = cost;
 
-            //get location
-            var loc_cat_est_obj = $(response).find('.res-name').siblings('div.mb5');
-            data[ajaxIndex].location = $.trim($(loc_cat_est_obj).find('a')[0].innerHTML);
+                //get location
+                var loc_cat_est_obj = $(response).find('.res-name').siblings('div.mb5');
+                data.location = $.trim($(loc_cat_est_obj).find('a')[0].innerHTML);
 
-            // get highlights
+                // get highlights
 
-            var highl = $(response).find('.res-info-feature-text');
-            var highlights = {};
-            $.each(highl, function(index, value){
-                highlights[index] = $(value)[0].innerHTML;
-            });
+                var highl = $(response).find('.res-info-feature-text');
+                var highlights = {};
+                $.each(highl, function(index, value){
+                    highlights[index] = $(value)[0].innerHTML;
+                });
 
-            data[ajaxIndex].highlights = highlights;
+                data.highlights = highlights;
 
-            ajaxIndex++;
+                ajaxIndex++;
 
-            localStorage.setItem('cur_page_restourants', JSON.stringify(cur_page_restourants));
-            localStorage.setItem('data', JSON.stringify(data));
-            localStorage.setItem('ajaxIndex', JSON.stringify(ajaxIndex));
-
-
-
-            if(ajaxIndex < (cur_page_restourants.length-25)) {
+                localStorage.setItem('cur_page_restourants', JSON.stringify(cur_page_restourants));
+                localStorage.setItem('data', JSON.stringify(data));
+                localStorage.setItem('ajaxIndex', JSON.stringify(ajaxIndex));
 
                 // get images
                 window.location = cur_page_restourants[ajaxIndex-1]+'/photos';
-                // doVisit();
+
             }
             else{
                 localStorage.removeItem('ajaxIndex');
                 localStorage.removeItem('cur_page_restourants');
                 localStorage.removeItem('data');
 
-                var d = JSON.stringify(data);
-                console.log(d);
+                if(page > 100){
+                    localStorage.removeItem('url');
+                    localStorage.removeItem('page');
 
-                $.ajax({
-                    url: 'https://restourants.app/fill/places',
-                    type: 'get',
-                    data: {
-                        data: d
-                    },
-                    success: function(){
-                        window.location = window.location.href+'?page=2'
-                    }
-                });
+                }
+                else{
+                    var url = localStorage.getItem('url');
+                    page++;
+                    localStorage.setItem('page', page);
+
+                    window.location = url+'?page='+page+'&start'
+                }
+
+
             }
         },
         error: function(error){
@@ -328,12 +366,91 @@ function load_photos(){
 
 }
 
+function get_menu() {
+
+    if(($('.text-menu-cat')).length > 0){
+
+        var menu_names = $('.text-menu-cat .category_name');
+        var menus = $('.text-menu-cat');
+        var menu_data = {};
+        $.each(menus, function(index, value){
+
+            var menu_name = menu_names[index].innerHTML;
+
+            menu_data[menu_name] = {};
+
+            var products = $(value).find('.tmi-name');
+            var product = {};
+            $.each(products, function(index, value){
+
+                product[index] = {};
+
+                product[index].title = $.trim($(value)[0].childNodes[0].data);
+                var price = $(value).find('.tmi-price-txt');
+                var desc = $(value).find('.tmi-desc-text');
+                if(price.length > 0){
+                    var p = $.trim(($(value).find('.tmi-price-txt'))[0].innerHTML);
+
+                    product[index].price = (p.split('$'))[1]
+                }
+                else{
+                    product[index].price = null;
+                }
+
+                if(desc.length > 0){
+                    product[index].description = $.trim(($(value).find('.tmi-desc-text'))[0].innerHTML);
+                }
+                else{
+                    product[index].description = null;
+                }
+
+            });
+
+            menu_data[menu_name] = product;
+
+        });
+
+
+        ajaxIndex = jQuery.parseJSON(localStorage.getItem('ajaxIndex'));
+        cur_page_restourants = jQuery.parseJSON(localStorage.getItem('cur_page_restourants'));
+        data = jQuery.parseJSON(localStorage.getItem('data'));
+
+        data.menus = menu_data;
+        localStorage.setItem('data', JSON.stringify(data));
+    }
+    else{
+        data.menus = null;
+        // localStorage.removeItem('ajaxIndex');
+        // localStorage.removeItem('cur_page_restourants');
+        // localStorage.removeItem('data');
+        localStorage.setItem('data', JSON.stringify(data));
+
+    }
+
+    var d = JSON.stringify(data);
+    console.log(d);
+    $.ajax({
+        url: base_url+'/fill/places',
+        type: 'post',
+        data: {
+            data: d
+        },
+        success: function(){
+
+            data = null;
+
+
+            doVisit();
+
+        }
+    });
+}
 function  get_photos() {
     var images = $('.photos_container_load_more a img');
 
     images[index].click();
 
-    if(images.length -(images.length -2) > index) {
+    if(images.length -(images.length -5) > index) {
         setTimeout(function () {
             index++;
             var bg = $('.heroImage').css('background-image');
@@ -351,23 +468,39 @@ function  get_photos() {
             a.remove();
 
             get_photos();
-        }, 5000);
+        }, 2000);
     }
         else{
         ajaxIndex = jQuery.parseJSON(localStorage.getItem('ajaxIndex'));
         cur_page_restourants = jQuery.parseJSON(localStorage.getItem('cur_page_restourants'));
         data = jQuery.parseJSON(localStorage.getItem('data'));
 
-        data[ajaxIndex-1].images = img;
+        data.images = img;
+       // localStorage.setItem('cur_page_restourants', JSON.stringify(cur_page_restourants));
+        localStorage.setItem('data', JSON.stringify(data));
+       // localStorage.setItem('ajaxIndex', JSON.stringify(ajaxIndex));
+        window.location = cur_page_restourants[ajaxIndex-1]+'/menu';
 
-        localStorage.removeItem('ajaxIndex');
-        localStorage.removeItem('cur_page_restourants');
-        localStorage.removeItem('data');
-
-        doVisit();
     }
 }
 $(document).ready(function(){
+
+    var url = window.location.href;
+    var url_arr = url.split('&');
+    if(url_arr.indexOf('cat_start') == 1){
+        assign_category();
+    }
+
+    if(url_arr.indexOf('type_start') == 1){
+        assign_type();
+    }
+
+    if(url_arr.indexOf('start') == 1){
+        create_visitable_urls();
+        doVisit();
+
+    }
+
 
     if(localStorage.getItem('cur_page_restourants')) {
         cur_page_restourants = jQuery.parseJSON(localStorage.getItem('cur_page_restourants'));
@@ -386,15 +519,49 @@ $(document).ready(function(){
         }
     }
 
+    if(localStorage.getItem('cur_page_restourants')) {
+        cur_page_restourants = jQuery.parseJSON(localStorage.getItem('cur_page_restourants'));
+        ajaxIndex = jQuery.parseJSON(localStorage.getItem('ajaxIndex'));
+        console.log(cur_page_restourants[ajaxIndex-1]);
+        if (window.location.href == cur_page_restourants[ajaxIndex-1] + '/menu'){
+
+            setTimeout(function(){
+                get_menu();
+            }, 2000);
+
+        }
+    }
+
     show_extension();
 
     $(document).on('click', '#ext_close', function(){
-        $('.extension').remove();
+        localStorage.removeItem('cat_page');
+        localStorage.removeItem('type_page');
+        localStorage.removeItem('page');
+        localStorage.removeItem('cur_page_restourants');
+        localStorage.removeItem('data');
+        localStorage.removeItem('ajaxIndex');
+        localStorage.removeItem('url');
+        localStorage.removeItem('cat_url');
+        localStorage.removeItem('type_url');
+
+
     });
 
     // start
     $(document).on('click', '#start', function(){
-        
+        localStorage.removeItem('cat_page');
+        localStorage.removeItem('type_page');
+        localStorage.removeItem('page');
+        localStorage.removeItem('cur_page_restourants');
+        localStorage.removeItem('data');
+        localStorage.removeItem('ajaxIndex');
+        localStorage.removeItem('url');
+        localStorage.removeItem('cat_url');
+        localStorage.removeItem('type_url');
+
+
+        localStorage.setItem('url', window.location.href);
         create_visitable_urls();
         
         add_cancel_btn();
@@ -409,10 +576,34 @@ $(document).ready(function(){
 
     });
     $(document).on('click', '#assign_categories', function(){
+        localStorage.removeItem('cat_page');
+        localStorage.removeItem('type_page');
+        localStorage.removeItem('page');
+        localStorage.removeItem('cur_page_restourants');
+        localStorage.removeItem('data');
+        localStorage.removeItem('ajaxIndex');
+        localStorage.removeItem('url');
+        localStorage.removeItem('cat_url');
+        localStorage.removeItem('type_url');
+
+        localStorage.setItem('cat_url', window.location.href);
         assign_category();
 
     });
     $(document).on('click', '#type', function(){
+        localStorage.removeItem('cat_page');
+        localStorage.removeItem('type_page');
+        localStorage.removeItem('page');
+        localStorage.removeItem('cur_page_restourants');
+        localStorage.removeItem('data');
+        localStorage.removeItem('ajaxIndex');
+        localStorage.removeItem('url');
+        localStorage.removeItem('cat_url');
+        localStorage.removeItem('type_url');
+
+
+        
+        localStorage.setItem('type_url', window.location.href);
         assign_type();
     });
 });
