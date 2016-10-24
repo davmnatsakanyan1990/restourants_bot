@@ -73,7 +73,7 @@ function assign_type() {
     $.each($('.result-title'), function(index, value){
         restaurants[index] = {};
         restaurants[index].name = $.trim($(value)[0].innerHTML);
-    })
+    });
     var data = {};
     data.restaurants = restaurants;
     data.type = type;
@@ -420,11 +420,7 @@ function get_menu() {
     }
     else{
         data.menus = null;
-        // localStorage.removeItem('ajaxIndex');
-        // localStorage.removeItem('cur_page_restourants');
-        // localStorage.removeItem('data');
         localStorage.setItem('data', JSON.stringify(data));
-
     }
 
     var d = JSON.stringify(data);
@@ -483,31 +479,47 @@ function  get_photos() {
 
     }
 }
+
+function clear_local_storage() {
+    localStorage.removeItem('cat_page');
+    localStorage.removeItem('type_page');
+    localStorage.removeItem('page');
+    localStorage.removeItem('cur_page_restourants');
+    localStorage.removeItem('data');
+    localStorage.removeItem('ajaxIndex');
+    localStorage.removeItem('url');
+    localStorage.removeItem('cat_url');
+    localStorage.removeItem('type_url');
+}
+
 $(document).ready(function(){
+    show_extension();
 
     var url = window.location.href;
     var url_arr = url.split('&');
     if(url_arr.indexOf('cat_start') == 1){
+        add_cancel_btn();
         assign_category();
     }
 
     if(url_arr.indexOf('type_start') == 1){
+        add_cancel_btn();
         assign_type();
     }
 
     if(url_arr.indexOf('start') == 1){
+        add_cancel_btn();
         create_visitable_urls();
         doVisit();
 
     }
-
 
     if(localStorage.getItem('cur_page_restourants')) {
         cur_page_restourants = jQuery.parseJSON(localStorage.getItem('cur_page_restourants'));
         ajaxIndex = jQuery.parseJSON(localStorage.getItem('ajaxIndex'));
         console.log(cur_page_restourants[ajaxIndex-1]);
         if (window.location.href == cur_page_restourants[ajaxIndex-1] + '/photos'){
-
+            add_cancel_btn();
             if(($('.picLoadMore')).length > 0){
                 load_photos();
             }
@@ -524,42 +536,20 @@ $(document).ready(function(){
         ajaxIndex = jQuery.parseJSON(localStorage.getItem('ajaxIndex'));
         console.log(cur_page_restourants[ajaxIndex-1]);
         if (window.location.href == cur_page_restourants[ajaxIndex-1] + '/menu'){
-
+            add_cancel_btn();
             setTimeout(function(){
                 get_menu();
             }, 2000);
-
         }
     }
 
-    show_extension();
-
     $(document).on('click', '#ext_close', function(){
-        localStorage.removeItem('cat_page');
-        localStorage.removeItem('type_page');
-        localStorage.removeItem('page');
-        localStorage.removeItem('cur_page_restourants');
-        localStorage.removeItem('data');
-        localStorage.removeItem('ajaxIndex');
-        localStorage.removeItem('url');
-        localStorage.removeItem('cat_url');
-        localStorage.removeItem('type_url');
-
-
+        clear_local_storage()
     });
 
     // start
     $(document).on('click', '#start', function(){
-        localStorage.removeItem('cat_page');
-        localStorage.removeItem('type_page');
-        localStorage.removeItem('page');
-        localStorage.removeItem('cur_page_restourants');
-        localStorage.removeItem('data');
-        localStorage.removeItem('ajaxIndex');
-        localStorage.removeItem('url');
-        localStorage.removeItem('cat_url');
-        localStorage.removeItem('type_url');
-
+        clear_local_storage();
 
         localStorage.setItem('url', window.location.href);
         create_visitable_urls();
@@ -569,41 +559,31 @@ $(document).ready(function(){
     });
 
     $(document).on('click', '#cancel', function(){
-        localStorage.setItem('data', data);
-        var url = window.location.href;
-        
-        window.location.href=url;
+        // localStorage.setItem('data', data);
+        // var url = window.location.href;
+
+        window.location.href=localStorage.getItem('url');
 
     });
     $(document).on('click', '#assign_categories', function(){
-        localStorage.removeItem('cat_page');
-        localStorage.removeItem('type_page');
-        localStorage.removeItem('page');
-        localStorage.removeItem('cur_page_restourants');
-        localStorage.removeItem('data');
-        localStorage.removeItem('ajaxIndex');
-        localStorage.removeItem('url');
-        localStorage.removeItem('cat_url');
-        localStorage.removeItem('type_url');
+        clear_local_storage();
 
         localStorage.setItem('cat_url', window.location.href);
+        localStorage.setItem('url', window.location.href);
+
+        add_cancel_btn();
+
         assign_category();
 
     });
     $(document).on('click', '#type', function(){
-        localStorage.removeItem('cat_page');
-        localStorage.removeItem('type_page');
-        localStorage.removeItem('page');
-        localStorage.removeItem('cur_page_restourants');
-        localStorage.removeItem('data');
-        localStorage.removeItem('ajaxIndex');
-        localStorage.removeItem('url');
-        localStorage.removeItem('cat_url');
-        localStorage.removeItem('type_url');
+        clear_local_storage();
 
-
-        
         localStorage.setItem('type_url', window.location.href);
+        localStorage.setItem('url', window.location.href);
+
+        add_cancel_btn();
+
         assign_type();
     });
 });
