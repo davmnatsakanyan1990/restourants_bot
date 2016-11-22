@@ -1,6 +1,7 @@
 var img = [];
 var index = 0;
 var sub_index;
+var comments = {};
 var s_comments = {};
 var cat_page;
 if(localStorage.getItem('cat_page')){
@@ -55,7 +56,7 @@ var base_url = 'https://restaurants.dev/';
 function assign_type() {
     type_page++;
     localStorage.setItem('type_page', type_page);
-    var url = location.href;
+    var url = decodeURIComponent(location.href);
     var arr = url.split("/");
     var count = arr.length;
     var last_el = arr[count-1];
@@ -94,7 +95,10 @@ function assign_type() {
                 alert('finished');
             }
             else{
-                window.location = localStorage.getItem('type_url')+'?page='+type_page+'&type_start';
+                console.log(localStorage.getItem('type_url'));
+                var url1 =  localStorage.getItem('type_url')+'?page='+type_page+'&type_start';
+                
+                window.location = url1;
             }
         }
     })
@@ -408,7 +412,44 @@ function get_menu() {
         localStorage.setItem('data', JSON.stringify(data));
     }
 
-    window.location = cur_page_restourants[ajaxIndex-1]+'/reviews';
+    if(is_exist_menu('Reviews')) {
+        window.location = cur_page_restourants[ajaxIndex - 1] + '/reviews';
+    }
+    else{
+        data.comments = comments;
+        console.log('finished');
+        var d = JSON.stringify(data);
+        console.log(d);
+        $.ajax({
+            url: base_url+'/fill/places',
+            type: 'post',
+            data: {
+                data: d
+            },
+            success: function(){
+
+                data = null;
+
+                doVisit();
+            }
+        });
+    }
+}
+
+function is_exist_menu(menu){
+    var a = false;
+    var menus = $('.respageMenuContainer a.item');
+    for(var i=0; i < menus.length; i++){
+        var str = menus[i].innerText;
+        var text = (str.split(' '))[0];
+        console.log(text);
+        if(text == menu){
+            a = true;
+            i = menus.length;
+        }
+    };
+
+    return a;
 }
 
 function load_comments() {
@@ -426,33 +467,33 @@ function load_comments() {
         }
     }, 1000);
 }
-var comments = {};
+
 
 function get_comments() {
 
-    var reviews = $("div[itemprop='review']");
+    var reviews = $(".res-reviews-container.res-reviews-area .res-review");
 
-    if(reviews.length - (reviews.length-3)  > index){
-        setTimeout(function () {
+    if(reviews.length  > index){
+        // setTimeout(function () {
             var section = reviews[index];
             comments[index] = {};
 
             //get author
-            comments[index].author = $.trim(($(section).find("div[itemprop='name'] a")[0]).innerHTML);
+            comments[index].author = $.trim(($(section).find(".ui.item>.item .content>.header a")[0]).innerHTML);
 
-            //get author avatar
-            var avatar_url = $($(section).find('img.avatar.image')[0]).attr('src');
-            var au = avatar_url.split('?');
-            var a = $("<a>").attr("href", au[0]).attr("download", "img").appendTo("body");
-            var image_name_array = au[0].split('/');
-            var length = image_name_array.length;
-            var image_name = image_name_array[length-1];
-            a[0].click();
-            a.remove();
-            comments[index].author_image = image_name;
+            // //get author avatar
+            // var avatar_url = $($(section).find('img.avatar.image')[0]).attr('src');
+            // var au = avatar_url.split('?');
+            // var a = $("<a>").attr("href", au[0]).attr("download", "img").appendTo("body");
+            // var image_name_array = au[0].split('/');
+            // var length = image_name_array.length;
+            // var image_name = image_name_array[length-1];
+            // a[0].click();
+            // a.remove();
+            // comments[index].author_image = image_name;
 
             //get rate
-            var rate_val = $(section).find("div[itemprop='description'] > div").attr('aria-label');
+            var rate_val = $(section).find(".rev-text > div").attr('aria-label');
             if(rate_val){
                 var rate = (rate_val.split('Rated '))[1];
             }
@@ -463,10 +504,20 @@ function get_comments() {
             comments[index].rate = rate;
 
             //get published date
-            comments[index].date = $(section).find("time[itemprop='datePublished']").attr('datetime');
+            comments[index].date = $(section).find("time").attr('datetime');
 
             //get comment
-            comments[index].text = $.trim(($($(section).find("div[itemprop='description']"))[0].innerText).substr(7));
+            var str = $($(section).find(".rev-text"))[0].innerText;
+
+            if(($(section).find(".rev-text>div.left")).length>0) {
+
+                var com_text = str.substr(str.indexOf(' '));
+
+                comments[index].text = com_text;
+            }
+            else{
+                comments[index].text = $.trim($($(section).find(".rev-text"))[0].innerText);
+            }
 
             // get sub comments
             var sub_comms = $(section).find('.review_comment_item');
@@ -484,51 +535,48 @@ function get_comments() {
                 console.log('next comment');
                 get_comments();
             }
-        }, 1000);
+        // }, 1000);
     }
     else{
         data.comments = comments;
-        console.log(data);
         console.log('finished');
         var d = JSON.stringify(data);
         console.log(d);
-        // $.ajax({
-        //     url: base_url+'/fill/places',
-        //     type: 'post',
-        //     data: {
-        //         data: d
-        //     },
-        //     success: function(){
-        //
-        //         data = null;
-        //
-        //
-        //        // doVisit();
-        //
-        //     }
-        // });
+        $.ajax({
+            url: base_url+'/fill/places',
+            type: 'post',
+            data: {
+                data: d
+            },
+            success: function(){
+
+                data = null;
+
+                doVisit();
+            }
+        });
     }
 }
 
 function sub_comments() {
 
-    var reviews = $("div[itemprop='review']");
+    var reviews = $(".res-reviews-container.res-reviews-area .res-review");
     var section = reviews[index];
     var sub_comms = $(section).find('.review_comment_item');
 
     if(sub_comms.length > sub_index){
 
-        var comment = [];
+        var comment = {};
 
-        var sub_avatar_url = $(sub_comms[sub_index]).find('img.round_avatar').attr('src');
-        var sau = sub_avatar_url.split('?');
-        var sa = $("<a>").attr("href", sau[0]).attr("download", "img").appendTo("body");
-        var sub_image_name_array = sau[0].split('/');
-        var sub_length = sub_image_name_array.length;
-        var sub_image_name = sub_image_name_array[sub_length-1];
-        sa[0].click();
-        sa.remove();
-        comment.author_image = sub_image_name;
+        // var sub_avatar_url = $(sub_comms[sub_index]).find('img.round_avatar').attr('src');
+        // var sau = sub_avatar_url.split('?');
+        // var sa = $("<a>").attr("href", sau[0]).attr("download", "img").appendTo("body");
+        // var sub_image_name_array = sau[0].split('/');
+        // var sub_length = sub_image_name_array.length;
+        // var sub_image_name = sub_image_name_array[sub_length-1];
+        // sa[0].click();
+        // sa.remove();
+        // comment.author_image = sub_image_name;
 
         comment.author = $.trim(($(sub_comms[sub_index]).find('.author'))[0].innerText);
 
@@ -536,9 +584,9 @@ function sub_comments() {
         s_comments[sub_index] = comment;
 
         sub_index++;
-        setTimeout(function(){
+
             sub_comments();
-        }, 1000);
+
     }
     else{
         comments[index].sub_comments = s_comments;
@@ -568,27 +616,41 @@ function load_photos(){
 function  get_photos() {
     var images = $('.photos_container_load_more a img');
 
-    images[index].click();
+    if(images.length > index) {
+        
+        images[index].click();
 
-    if(images.length -(images.length -2) > index) {
         setTimeout(function () {
             index++;
             var bg = $('.heroImage').css('background-image');
-            var bi = bg.slice(4, -1).replace(/"/g, "");
-            var bu = bi.split('?');
+            if(typeof bg != 'undefined') {
+                var bi = bg.slice(4, -1).replace(/"/g, "");
+                var bu = bi.split('?');
 
-            var a = $("<a>").attr("href", bu[0]).attr("download", "img").appendTo("body");
-            var image_name_array = bu[0].split('/');
+                var a = $("<a>").attr("href", bu[0]).attr("download", "img").appendTo("body");
+                var image_name_array = bu[0].split('/');
 
-            var length = image_name_array.length;
-            var image_name = image_name_array[length-1];
+                var length = image_name_array.length;
+                var image_name = image_name_array[length - 1];
 
-            img.push(image_name);
-            a[0].click();
-            a.remove();
+                if (img.indexOf(image_name) == -1) {
+                    img.push(image_name);
 
-            get_photos();
-        }, 2000);
+                    a[0].click();
+                    a.remove();
+                    get_photos();
+                }
+                else {
+                    a.remove();
+                    index = images.length;
+                    get_photos();
+                }
+            }
+            else{
+                index = images.length;
+                get_photos();
+            }
+        }, 3000);
     }
         else{
         ajaxIndex = jQuery.parseJSON(localStorage.getItem('ajaxIndex'));
@@ -641,7 +703,7 @@ $(document).ready(function(){
     if(localStorage.getItem('cur_page_restourants')) {
         cur_page_restourants = jQuery.parseJSON(localStorage.getItem('cur_page_restourants'));
         ajaxIndex = jQuery.parseJSON(localStorage.getItem('ajaxIndex'));
-        if (window.location.href == cur_page_restourants[ajaxIndex-1] + '/photos'){
+        if (decodeURIComponent(window.location.href) == cur_page_restourants[ajaxIndex-1] + '/photos'){
             add_cancel_btn();
             if(($('.picLoadMore')).length > 0){
                 load_photos();
@@ -657,7 +719,7 @@ $(document).ready(function(){
     if(localStorage.getItem('cur_page_restourants')) {
         cur_page_restourants = jQuery.parseJSON(localStorage.getItem('cur_page_restourants'));
         ajaxIndex = jQuery.parseJSON(localStorage.getItem('ajaxIndex'));
-        if (window.location.href == cur_page_restourants[ajaxIndex-1] + '/reviews'){
+        if (decodeURIComponent(window.location.href) == cur_page_restourants[ajaxIndex-1] + '/reviews'){
             add_cancel_btn();
             setTimeout(function(){
                 $('.everyone')[0].click();
@@ -683,7 +745,7 @@ $(document).ready(function(){
     if(localStorage.getItem('cur_page_restourants')) {
         cur_page_restourants = jQuery.parseJSON(localStorage.getItem('cur_page_restourants'));
         ajaxIndex = jQuery.parseJSON(localStorage.getItem('ajaxIndex'));
-        if (window.location.href == cur_page_restourants[ajaxIndex-1] + '/menu'){
+        if (decodeURIComponent(window.location.href) == cur_page_restourants[ajaxIndex-1] + '/menu'){
             add_cancel_btn();
             setTimeout(function(){
                 get_menu();
@@ -727,8 +789,8 @@ $(document).ready(function(){
     $(document).on('click', '#type', function(){
         clear_local_storage();
 
-        localStorage.setItem('type_url', window.location.href);
-        localStorage.setItem('url', window.location.href);
+        localStorage.setItem('type_url', decodeURIComponent(window.location.href));
+        localStorage.setItem('url', decodeURIComponent(window.location.href));
 
         add_cancel_btn();
 
