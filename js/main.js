@@ -51,7 +51,8 @@ else{
     ajaxIndex = 0;
 }
 
-var base_url = 'https://restaurants.dev/';
+var base_url = 'https://restadviser.com/';
+var current_city = 'Philadelphia';
 
 function assign_type() {
     type_page++;
@@ -123,11 +124,15 @@ function assign_category(){
     var category = cat.split('-').join(' ');
 
     var restaurants = {};
-    $.each($('.result-title'), function(index, value){
+    // $.each($('.result-title'), function(index, value){
+    //     restaurants[index] = {};
+    //     restaurants[index].name = $.trim($(value)[0].innerHTML);
+    // });
+    $.each($('#orig-search-list .search-snippet-card'), function(index, value){
         restaurants[index] = {};
-        restaurants[index].name = $.trim($(value)[0].innerHTML);
+        restaurants[index].name = $.trim(($(($(value).find('.result-title'))[0])[0]).innerHTML);
+        restaurants[index].address = $.trim(($(($(value).find('.search-result-address'))[0])[0]).innerHTML);
     });
-
     var data = {};
     data.restaurants = restaurants;
     data.category = category;
@@ -172,7 +177,8 @@ function get_cuisines() {
             },
             type: 'get',
             success: function(){
-                get_locations();
+                // get_locations();
+                doVisit();
             }
         })
     }, 2000);
@@ -187,7 +193,7 @@ function get_locations() {
         var location = {};
         var loc = $('#modal-container .c-sel-con-area .row>a>span');
         $.each(loc, function(index, value){
-            location[index] = $(value)[0].innerHTML;
+            location[index] = $.trim($(value)[0].innerText);
         });
 
         data['location'] = {};
@@ -201,7 +207,7 @@ function get_locations() {
             data: {
                 data: d
             },
-            type: 'get',
+            type: 'post',
             success: function(data){
                 setTimeout(function(){
                     doVisit();
@@ -256,84 +262,91 @@ function doVisit() {
         type: 'get',
         success: function(response){
             if(ajaxIndex < cur_page_restourants.length) {
-                // get all restaurant's names
-                var n = $(response).find('.res-name').text();
-                data = {};
 
-                data.name = $.trim(n);
+                if(($(response).find('#location_input_sp')[0]).innerText!= current_city){
+                    ajaxIndex++;
+                    localStorage.setItem('ajaxIndex', JSON.stringify(ajaxIndex));
+                    doVisit();
+                }
+                else{
+                    // get all restaurant's names
+                    var n = $(response).find('.res-name').text();
+                    data = {};
 
-                // get phone numbers
-                var phone = $(response).find('#phoneNoString > span > span > span').text();
-                data.mobile = $.trim(phone);
+                    data.name = $.trim(n);
 
-                // get address
-                var addr = $(response).find('.res-main-address>.resinfo-icon>span').text();
-                data.address = $.trim(addr);
+                    // get phone numbers
+                    var phone = $(response).find('#phoneNoString > span > span > span').text();
+                    data.mobile = $.trim(phone);
 
-                //get working hours
-                var wrkhours = $(response).find('#res-week-timetable > table > tbody > tr');
-                var working_days = {};
-                $.each(wrkhours, function(index, value){
+                    // get address
+                    var addr = $(response).find('.res-main-address>.resinfo-icon>span').text();
+                    data.address = $.trim(addr);
 
-                    var day_obj = $(value)[0].firstChild;
-                    var wk_day = $(day_obj)[0].innerHTML;
+                    //get working hours
+                    var wrkhours = $(response).find('#res-week-timetable > table > tbody > tr');
+                    var working_days = {};
+                    $.each(wrkhours, function(index, value){
 
-                    var hour_obj = $(value)[0].lastChild;
-                    var hours = $(hour_obj)[0].innerHTML;
+                        var day_obj = $(value)[0].firstChild;
+                        var wk_day = $(day_obj)[0].innerHTML;
 
-                    working_days[wk_day] = hours;
-                });
+                        var hour_obj = $(value)[0].lastChild;
+                        var hours = $(hour_obj)[0].innerHTML;
 
-                data.workinghours = working_days;
+                        working_days[wk_day] = hours;
+                    });
 
-                // get cuisines
-                var cuisines = {};
-                var cuis = $(response).find('.res-info-cuisines a');
-                $.each(cuis, function(index, value){
+                    data.workinghours = working_days;
 
-                    cuisines[index] = $(value)[0].innerHTML;
-                });
+                    // get cuisines
+                    var cuisines = {};
+                    var cuis = $(response).find('.res-info-cuisines a');
+                    $.each(cuis, function(index, value){
 
-                data.cuisines = cuisines;
-                // get cost
-                var cost = {};
-                var cost_arr = $(response).find('span[itemprop = "priceRange"] span');
-                $.each(cost_arr, function(index, value){
-                    cost[index] = $(value)[0].innerHTML;
-                });
+                        cuisines[index] = $(value)[0].innerHTML;
+                    });
 
-                data.cost = cost;
+                    data.cuisines = cuisines;
+                    // get cost
+                    var cost = {};
+                    var cost_arr = $(response).find('span[itemprop = "priceRange"] span');
+                    $.each(cost_arr, function(index, value){
+                        cost[index] = $(value)[0].innerHTML;
+                    });
 
-                //get location
-                var loc_cat_est_obj = $(response).find('.res-name').siblings('div.mb5');
-                data.location = $.trim($(loc_cat_est_obj).find('a')[0].innerHTML);
+                    data.cost = cost;
 
-                // get highlights
+                    //get location
+                    var loc_cat_est_obj = $(response).find('.res-name').siblings('div.mb5');
+                    data.location = $.trim($(loc_cat_est_obj).find('a')[0].innerHTML);
 
-                var highl = $(response).find('.res-info-feature-text');
-                var highlights = {};
-                $.each(highl, function(index, value){
-                    highlights[index] = $(value)[0].innerHTML;
-                });
+                    // get highlights
 
-                data.highlights = highlights;
+                    var highl = $(response).find('.res-info-feature-text');
+                    var highlights = {};
+                    $.each(highl, function(index, value){
+                        highlights[index] = $(value)[0].innerHTML;
+                    });
 
-                ajaxIndex++;
+                    data.highlights = highlights;
 
-                localStorage.setItem('cur_page_restourants', JSON.stringify(cur_page_restourants));
-                localStorage.setItem('data', JSON.stringify(data));
-                localStorage.setItem('ajaxIndex', JSON.stringify(ajaxIndex));
+                    ajaxIndex++;
 
-                // get images
-                window.location = cur_page_restourants[ajaxIndex-1]+'/photos';
+                    localStorage.setItem('cur_page_restourants', JSON.stringify(cur_page_restourants));
+                    localStorage.setItem('data', JSON.stringify(data));
+                    localStorage.setItem('ajaxIndex', JSON.stringify(ajaxIndex));
 
+                    // get images
+                    window.location = cur_page_restourants[ajaxIndex-1]+'/photos';
+                }
             }
             else{
                 localStorage.removeItem('ajaxIndex');
                 localStorage.removeItem('cur_page_restourants');
                 localStorage.removeItem('data');
 
-                if(page > 100){
+                if(page > 314){
                     localStorage.removeItem('url');
                     localStorage.removeItem('page');
 
